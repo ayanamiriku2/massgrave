@@ -181,65 +181,82 @@ function escapeRegExp(string) {
 }
 
 // ─── Donate navbar button injection ──────────────────────────────────────────
-// Inject as a FIXED element OUTSIDE React's #__docusaurus root.
-// React cannot remove elements outside its root container.
+// Strategy: inject CSS to create space in navbar + fixed element outside React root
 const DONATE_INJECT_HTML = `
 <style>
-#mas-donate-fixed{
-  position:fixed;
-  top:0;
-  right:0;
-  height:60px;
-  z-index:10000;
-  display:flex;
-  align-items:center;
-  pointer-events:none;
+/* Desktop: create space at the far right of the navbar for our donate button */
+@media(min-width:997px){
+  .navbar .navbar__inner{
+    padding-right:90px!important;
+  }
+  #mas-donate-btn{
+    position:fixed;
+    top:0;
+    right:0;
+    height:60px;
+    z-index:10000;
+    display:flex;
+    align-items:center;
+    padding:0 16px 0 8px;
+  }
+  #mas-donate-btn a{
+    color:#e8590c;
+    font-weight:700;
+    font-size:.9rem;
+    text-decoration:none;
+    padding:6px 14px;
+    border-radius:6px;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
+    transition:all .2s;
+    white-space:nowrap;
+  }
+  #mas-donate-btn a:hover{
+    color:#fff;
+    background:#e8590c;
+  }
 }
-#mas-donate-fixed a{
-  pointer-events:auto;
-  color:#e8590c;
-  font-weight:700;
-  font-size:.9rem;
-  text-decoration:none;
-  padding:0.25rem 0.75rem;
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
-  transition:color .2s;
-}
-#mas-donate-fixed a:hover{color:#fd7e14;}
+/* Mobile: show donate as a sticky bar at the bottom */
 @media(max-width:996px){
-  #mas-donate-fixed{height:60px;right:0;}
+  .navbar .navbar__inner{
+    padding-right:0!important;
+  }
+  #mas-donate-btn{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:48px;
+    z-index:10000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(36,37,38,0.97);
+    border-top:1px solid #3a3a3c;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+  }
+  #mas-donate-btn a{
+    color:#e8590c;
+    font-weight:700;
+    font-size:1rem;
+    text-decoration:none;
+    padding:8px 32px;
+    border-radius:6px;
+    border:1.5px solid #e8590c;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
+    transition:all .2s;
+  }
+  #mas-donate-btn a:hover{
+    color:#fff;
+    background:#e8590c;
+  }
+  /* Add bottom padding to main content so it's not hidden behind donate bar */
+  #__docusaurus{
+    padding-bottom:48px;
+  }
 }
 </style>
-<div id="mas-donate-fixed"><a href="/donate">Donate</a></div>
-<script>
-(function(){
-  // Dynamically position donate button to the left of the toggle/search area
-  function posBtn(){
-    var nav=document.querySelector('.navbar');
-    var toggle=document.querySelector('[class*="colorModeToggle"],[class*="toggle_"]');
-    var search=document.querySelector('[class*="navbarSearchContainer"]');
-    var anchor=toggle||search;
-    var donate=document.getElementById('mas-donate-fixed');
-    if(!nav||!donate)return;
-    // Match navbar height
-    donate.style.height=nav.offsetHeight+'px';
-    if(anchor){
-      var rect=anchor.getBoundingClientRect();
-      donate.style.right=(window.innerWidth-rect.left)+'px';
-    }
-  }
-  // Run positioning after load and on resize
-  if(document.readyState==='complete'){posBtn();}
-  else{window.addEventListener('load',posBtn);}
-  window.addEventListener('resize',posBtn);
-  // Re-position on DOM changes (SPA navigation)
-  var t;
-  new MutationObserver(function(){
-    clearTimeout(t);
-    t=setTimeout(posBtn,100);
-  }).observe(document.body,{childList:true,subtree:true});
-})();
-</script>`;
+<div id="mas-donate-btn"><a href="/donate">Donate</a></div>`;
 
 function injectDonateButton(html) {
   // Inject right before </body> — outside React's root
