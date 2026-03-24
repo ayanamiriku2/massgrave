@@ -180,27 +180,44 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// ─── Donate navbar button injection ──────────────────────────────────────────
-const DONATE_NAV_BUTTON = `<a class="navbar__item navbar__link" href="/donate" style="color:#e8590c;font-weight:bold;">Donate</a>`;
+// ─── Donate navbar button injection (client-side, avoids React hydration mismatch) ─
+const DONATE_INJECT_SCRIPT = `<script>
+(function(){
+  function addDonateBtn(){
+    var rightItems=document.querySelector('.navbar__items--right,.theme-layout-navbar-right');
+    if(!rightItems)return false;
+    if(rightItems.querySelector('a[href="/donate"]'))return true;
+    var toggle=rightItems.querySelector('[class*="toggle_"],[class*="colorModeToggle"]');
+    var btn=document.createElement('a');
+    btn.className='navbar__item navbar__link';
+    btn.href='/donate';
+    btn.style.cssText='color:#e8590c;font-weight:bold;';
+    btn.textContent='Donate';
+    if(toggle){rightItems.insertBefore(btn,toggle);}
+    else{rightItems.appendChild(btn);}
+    return true;
+  }
+  // Wait for React hydration to complete, then inject
+  var tries=0;
+  var iv=setInterval(function(){
+    if(addDonateBtn()||++tries>50)clearInterval(iv);
+  },200);
+  // Also re-inject on SPA navigation (Docusaurus client-side routing)
+  var obs=new MutationObserver(function(){
+    addDonateBtn();
+  });
+  obs.observe(document.body,{childList:true,subtree:true});
+})();
+</script>`;
 
 function injectDonateButton(html) {
-  // Inject before the dark mode toggle container in the right side of navbar
-  const toggleMarker = '<div class="toggle_';
-  const idx = html.indexOf(toggleMarker);
+  // Inject script before </body> — runs after React hydration
+  const idx = html.lastIndexOf('</body>');
   if (idx !== -1) {
-    return html.slice(0, idx) + DONATE_NAV_BUTTON + html.slice(idx);
+    return html.slice(0, idx) + DONATE_INJECT_SCRIPT + html.slice(idx);
   }
-  // Fallback: inject before navbarSearchContainer
-  const searchMarker = '<div class="navbarSearchContainer';
-  const idx2 = html.indexOf(searchMarker);
-  if (idx2 !== -1) {
-    return html.slice(0, idx2) + DONATE_NAV_BUTTON + html.slice(idx2);
-  }
-  // Fallback: inject before closing </nav> of navbar
-  return html.replace(
-    /(<\/div>\s*<\/div>\s*<\/nav>)/i,
-    DONATE_NAV_BUTTON + '$1'
-  );
+  // Fallback: append to end
+  return html + DONATE_INJECT_SCRIPT;
 }
 
 // ─── Custom /donate page ─────────────────────────────────────────────────────
