@@ -180,44 +180,74 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// ─── Donate navbar button injection (client-side, avoids React hydration mismatch) ─
-const DONATE_INJECT_SCRIPT = `<script>
+// ─── Donate navbar button injection ──────────────────────────────────────────
+// Inject as a FIXED element OUTSIDE React's #__docusaurus root.
+// React cannot remove elements outside its root container.
+const DONATE_INJECT_HTML = `
+<style>
+#mas-donate-fixed{
+  position:fixed;
+  top:0;
+  right:0;
+  height:60px;
+  z-index:10000;
+  display:flex;
+  align-items:center;
+  pointer-events:none;
+}
+#mas-donate-fixed a{
+  pointer-events:auto;
+  color:#e8590c;
+  font-weight:700;
+  font-size:.9rem;
+  text-decoration:none;
+  padding:0.25rem 0.75rem;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
+  transition:color .2s;
+}
+#mas-donate-fixed a:hover{color:#fd7e14;}
+@media(max-width:996px){
+  #mas-donate-fixed{height:60px;right:0;}
+}
+</style>
+<div id="mas-donate-fixed"><a href="/donate">Donate</a></div>
+<script>
 (function(){
-  function addDonateBtn(){
-    var rightItems=document.querySelector('.navbar__items--right,.theme-layout-navbar-right');
-    if(!rightItems)return false;
-    if(rightItems.querySelector('a[href="/donate"]'))return true;
-    var toggle=rightItems.querySelector('[class*="toggle_"],[class*="colorModeToggle"]');
-    var btn=document.createElement('a');
-    btn.className='navbar__item navbar__link';
-    btn.href='/donate';
-    btn.style.cssText='color:#e8590c;font-weight:bold;';
-    btn.textContent='Donate';
-    if(toggle){rightItems.insertBefore(btn,toggle);}
-    else{rightItems.appendChild(btn);}
-    return true;
+  // Dynamically position donate button to the left of the toggle/search area
+  function posBtn(){
+    var nav=document.querySelector('.navbar');
+    var toggle=document.querySelector('[class*="colorModeToggle"],[class*="toggle_"]');
+    var search=document.querySelector('[class*="navbarSearchContainer"]');
+    var anchor=toggle||search;
+    var donate=document.getElementById('mas-donate-fixed');
+    if(!nav||!donate)return;
+    // Match navbar height
+    donate.style.height=nav.offsetHeight+'px';
+    if(anchor){
+      var rect=anchor.getBoundingClientRect();
+      donate.style.right=(window.innerWidth-rect.left)+'px';
+    }
   }
-  // Wait for React hydration to complete, then inject
-  var tries=0;
-  var iv=setInterval(function(){
-    if(addDonateBtn()||++tries>50)clearInterval(iv);
-  },200);
-  // Also re-inject on SPA navigation (Docusaurus client-side routing)
-  var obs=new MutationObserver(function(){
-    addDonateBtn();
-  });
-  obs.observe(document.body,{childList:true,subtree:true});
+  // Run positioning after load and on resize
+  if(document.readyState==='complete'){posBtn();}
+  else{window.addEventListener('load',posBtn);}
+  window.addEventListener('resize',posBtn);
+  // Re-position on DOM changes (SPA navigation)
+  var t;
+  new MutationObserver(function(){
+    clearTimeout(t);
+    t=setTimeout(posBtn,100);
+  }).observe(document.body,{childList:true,subtree:true});
 })();
 </script>`;
 
 function injectDonateButton(html) {
-  // Inject script before </body> — runs after React hydration
+  // Inject right before </body> — outside React's root
   const idx = html.lastIndexOf('</body>');
   if (idx !== -1) {
-    return html.slice(0, idx) + DONATE_INJECT_SCRIPT + html.slice(idx);
+    return html.slice(0, idx) + DONATE_INJECT_HTML + html.slice(idx);
   }
-  // Fallback: append to end
-  return html + DONATE_INJECT_SCRIPT;
+  return html + DONATE_INJECT_HTML;
 }
 
 // ─── Custom /donate page ─────────────────────────────────────────────────────
