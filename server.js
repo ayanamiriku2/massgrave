@@ -211,19 +211,42 @@ app.get("/robots.txt", async (_req, res) => {
   }
 });
 
-// ─── decompress helper ───────────────────────────────────────────────────────
-function decompressBuffer(buffer, encoding) {
-  return new Promise((resolve, reject) => {
-    if (encoding === "gzip") {
-      zlib.gunzip(buffer, (err, result) => (err ? reject(err) : resolve(result)));
-    } else if (encoding === "deflate") {
-      zlib.inflate(buffer, (err, result) => (err ? reject(err) : resolve(result)));
-    } else if (encoding === "br") {
-      zlib.brotliDecompress(buffer, (err, result) => (err ? reject(err) : resolve(result)));
-    } else {
-      resolve(buffer);
-    }
+// ─── decompress helper (fault-tolerant) ──────────────────────────────────────
+function tryDecompress(buffer, fn) {
+  return new Promise((resolve) => {
+    fn(buffer, (err, result) => resolve(err ? null : result));
   });
+}
+
+async function decompressBuffer(buffer, encoding) {
+  if (!encoding || !buffer || buffer.length === 0) return buffer;
+
+  // Try declared encoding first
+  const decoders = {
+    gzip: zlib.gunzip,
+    deflate: zlib.inflate,
+    br: zlib.brotliDecompress,
+  };
+
+  const primary = decoders[encoding];
+  if (primary) {
+    const result = await tryDecompress(buffer, primary);
+    if (result) return result;
+  }
+
+  // If declared encoding failed, try all others
+  for (const [name, fn] of Object.entries(decoders)) {
+    if (name === encoding) continue;
+    const result = await tryDecompress(buffer, fn);
+    if (result) return result;
+  }
+
+  // Also try inflate raw (some servers send raw deflate without zlib header)
+  const rawResult = await tryDecompress(buffer, zlib.inflateRaw);
+  if (rawResult) return rawResult;
+
+  // Nothing worked — return buffer as-is (probably already uncompressed)
+  return buffer;
 }
 
 // ─── Main reverse-proxy with response rewriting ──────────────────────────────
