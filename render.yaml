@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: massgrave-mirror
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /robots.txt
+    envVars:
+      - key: ORIGIN_HOST
+        value: massgrave.dev
+      - key: MIRROR_HOST
+        value: massgrave.run
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
