@@ -228,16 +228,37 @@ const DONATE_INJECT_HTML = `
     font-size:.8rem;
     padding:5px 10px;
   }
-  /* Show donate in sidebar menu */
   .mas-donate-sidebar{
     display:list-item;
   }
+}
+/* Hide donate button when on /donate page */
+body.is-donate-page #mas-donate-btn{
+  display:none!important;
+}
+body.is-donate-page .navbar .navbar__inner{
+  padding-right:0!important;
+}
+body.is-donate-page .mas-donate-sidebar{
+  display:none!important;
 }
 </style>
 <div id="mas-donate-btn"><a href="/donate">Donate</a></div>
 <script>
 (function(){
+  // Hide donate button on /donate page
+  function checkDonatePage(){
+    if(location.pathname==='/donate'||location.pathname==='/donate/'){
+      document.body.classList.add('is-donate-page');
+    }else{
+      document.body.classList.remove('is-donate-page');
+    }
+  }
+  checkDonatePage();
+
+  // Add donate link to mobile sidebar
   function addSidebarLink(){
+    if(document.body.classList.contains('is-donate-page'))return;
     var lists=document.querySelectorAll('.navbar-sidebar__item.menu .menu__list');
     lists.forEach(function(ul){
       if(ul.querySelector('.mas-donate-sidebar'))return;
@@ -248,7 +269,7 @@ const DONATE_INJECT_HTML = `
     });
   }
   addSidebarLink();
-  new MutationObserver(function(){addSidebarLink();}).observe(document.body,{childList:true,subtree:true});
+  new MutationObserver(function(){checkDonatePage();addSidebarLink();}).observe(document.body,{childList:true,subtree:true});
 })();
 </script>`;
 
@@ -477,7 +498,6 @@ function getDonatePage() {
       <div class="navbar__items">
         <a class="navbar__link navbar__items--hide-mobile" href="/blog">Blog</a>
         <a class="navbar__link navbar__items--hide-mobile" href="/contactus">Contact Us</a>
-        <a class="navbar__link navbar__link--donate" href="/donate">Donate</a>
       </div>
     </div>
   </nav>
