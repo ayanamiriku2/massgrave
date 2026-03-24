@@ -180,6 +180,327 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// ─── Donate navbar button injection ──────────────────────────────────────────
+const DONATE_NAV_BUTTON = `<a class="navbar__item navbar__link" href="/donate" style="color:#e8590c;font-weight:bold;">Donate</a>`;
+
+function injectDonateButton(html) {
+  // Inject before the dark mode toggle container in the right side of navbar
+  const toggleMarker = '<div class="toggle_';
+  const idx = html.indexOf(toggleMarker);
+  if (idx !== -1) {
+    return html.slice(0, idx) + DONATE_NAV_BUTTON + html.slice(idx);
+  }
+  // Fallback: inject before navbarSearchContainer
+  const searchMarker = '<div class="navbarSearchContainer';
+  const idx2 = html.indexOf(searchMarker);
+  if (idx2 !== -1) {
+    return html.slice(0, idx2) + DONATE_NAV_BUTTON + html.slice(idx2);
+  }
+  // Fallback: inject before closing </nav> of navbar
+  return html.replace(
+    /(<\/div>\s*<\/div>\s*<\/nav>)/i,
+    DONATE_NAV_BUTTON + '$1'
+  );
+}
+
+// ─── Custom /donate page ─────────────────────────────────────────────────────
+function getDonatePage() {
+  return `<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark" data-has-hydrated="false">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donate - MAS</title>
+  <meta name="description" content="Support MAS development with cryptocurrency donations">
+  <link rel="canonical" href="https://${MIRROR_HOST}/donate">
+  <meta property="og:title" content="Donate - MAS">
+  <meta property="og:url" content="https://${MIRROR_HOST}/donate">
+  <link rel="icon" href="/img/favicon.ico">
+  <style>
+    :root {
+      --ifm-color-primary: #2e8555;
+      --ifm-color-primary-dark: #29784c;
+      --ifm-color-primary-darker: #277148;
+      --ifm-color-primary-darkest: #205d3b;
+      --ifm-color-primary-light: #33925d;
+      --ifm-color-primary-lighter: #359962;
+      --ifm-color-primary-lightest: #3cad6e;
+      --ifm-background-color: #1b1b1d;
+      --ifm-background-surface-color: #242526;
+      --ifm-font-color-base: #e3e3e3;
+      --ifm-heading-color: #ffffff;
+      --ifm-container-width: 1140px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+      background-color: var(--ifm-background-color);
+      color: var(--ifm-font-color-base);
+      line-height: 1.65;
+    }
+    .navbar {
+      background-color: #242526;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      box-shadow: 0 1px 2px 0 rgba(0,0,0,.3);
+      position: sticky;
+      top: 0;
+      z-index: 999;
+    }
+    .navbar__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: var(--ifm-container-width);
+      margin: 0 auto;
+    }
+    .navbar__brand {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: var(--ifm-heading-color);
+      font-weight: bold;
+      font-size: 1.1rem;
+      gap: 0.5rem;
+    }
+    .navbar__brand img { height: 32px; }
+    .navbar__items { display: flex; align-items: center; gap: 1rem; }
+    .navbar__link {
+      color: var(--ifm-font-color-base);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .navbar__link:hover { color: var(--ifm-color-primary); }
+    .navbar__link--donate { color: #e8590c !important; font-weight: bold !important; }
+    .container {
+      max-width: var(--ifm-container-width);
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+    h1 {
+      font-size: 2rem;
+      color: var(--ifm-heading-color);
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      font-size: 1.1rem;
+      color: #a0a0a0;
+      margin-bottom: 2rem;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #3a3a3c;
+      margin: 1.5rem 0;
+    }
+    .donate-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .donate-card {
+      background: var(--ifm-background-surface-color);
+      border: 1px solid #3a3a3c;
+      border-radius: 8px;
+      padding: 1.5rem;
+      transition: border-color 0.2s;
+    }
+    .donate-card:hover {
+      border-color: var(--ifm-color-primary);
+    }
+    .donate-card h3 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--ifm-heading-color);
+      margin-bottom: 1rem;
+      font-size: 1.15rem;
+    }
+    .donate-card .coin-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .coin-btc { background: #f7931a; }
+    .coin-ltc { background: #345d9d; }
+    .coin-bnb { background: #f3ba2f; color: #000 !important; }
+    .coin-sol { background: linear-gradient(135deg, #9945ff, #14f195); }
+    .address-box {
+      background: #1b1b1d;
+      border: 1px solid #3a3a3c;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .address-text {
+      font-family: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.78rem;
+      word-break: break-all;
+      flex: 1;
+      color: #c9d1d9;
+      user-select: all;
+    }
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #3a3a3c;
+      border-radius: 4px;
+      color: var(--ifm-font-color-base);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover {
+      background: var(--ifm-color-primary);
+      border-color: var(--ifm-color-primary);
+      color: #fff;
+    }
+    .copy-btn.copied {
+      background: var(--ifm-color-primary);
+      border-color: var(--ifm-color-primary);
+      color: #fff;
+    }
+    .tip-box {
+      background: rgba(46,133,85,0.1);
+      border: 1px solid rgba(46,133,85,0.3);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 2rem;
+    }
+    .tip-box strong { color: var(--ifm-color-primary); }
+    .breadcrumbs {
+      list-style: none;
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .breadcrumbs a {
+      color: var(--ifm-color-primary);
+      text-decoration: none;
+    }
+    .breadcrumbs a:hover { text-decoration: underline; }
+    .breadcrumbs .sep { color: #666; }
+    .breadcrumbs .current { color: var(--ifm-font-color-base); }
+    @media (max-width: 768px) {
+      .donate-grid { grid-template-columns: 1fr; }
+      .navbar__items--hide-mobile { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar__inner">
+      <div class="navbar__items">
+        <a class="navbar__brand" href="/">
+          <img src="/img/logo.png" alt="MAS">
+          <b>MAS</b>
+        </a>
+        <a class="navbar__link navbar__items--hide-mobile" href="/">Home</a>
+        <a class="navbar__link navbar__items--hide-mobile" href="/genuine-installation-media">Download Windows / Office</a>
+        <a class="navbar__link navbar__items--hide-mobile" href="/faq">FAQ</a>
+        <a class="navbar__link navbar__items--hide-mobile" href="/troubleshoot">Troubleshoot</a>
+      </div>
+      <div class="navbar__items">
+        <a class="navbar__link navbar__items--hide-mobile" href="/blog">Blog</a>
+        <a class="navbar__link navbar__items--hide-mobile" href="/contactus">Contact Us</a>
+        <a class="navbar__link navbar__link--donate" href="/donate">Donate</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <ul class="breadcrumbs">
+      <li><a href="/">Home</a></li>
+      <li class="sep">/</li>
+      <li class="current">Donate</li>
+    </ul>
+
+    <header>
+      <h1>Support MAS Development</h1>
+      <p class="subtitle">Your donation helps keep this project alive and maintained. Every contribution is appreciated!</p>
+    </header>
+
+    <hr>
+
+    <div class="donate-grid">
+      <div class="donate-card">
+        <h3><span class="coin-icon coin-btc">&#8383;</span> Bitcoin (BTC)</h3>
+        <div class="address-box">
+          <span class="address-text">bc1ql6mxrpw6hgcjlt9ny4f9m9qj5c9n8q6fqp0r8qdvyxeyd6arvq7qt0yzdh</span>
+          <button class="copy-btn" onclick="copyAddr(this)">Copy</button>
+        </div>
+      </div>
+
+      <div class="donate-card">
+        <h3><span class="coin-icon coin-ltc">&#321;</span> Litecoin (LTC)</h3>
+        <div class="address-box">
+          <span class="address-text">ltc1q9ql9dvznmlka3k0mjatlt7kppj8qu4gu8z9ef9qcrhdewhja7xnsw5059g</span>
+          <button class="copy-btn" onclick="copyAddr(this)">Copy</button>
+        </div>
+      </div>
+
+      <div class="donate-card">
+        <h3><span class="coin-icon coin-bnb">B</span> BNB Smart Chain (BSC)</h3>
+        <div class="address-box">
+          <span class="address-text">0x5dea511ce409452a38e283462e0c8afd2e8d720b</span>
+          <button class="copy-btn" onclick="copyAddr(this)">Copy</button>
+        </div>
+      </div>
+
+      <div class="donate-card">
+        <h3><span class="coin-icon coin-sol">S</span> Solana (SOL)</h3>
+        <div class="address-box">
+          <span class="address-text">6y31Eqx74xVumCiunL25Ff1ms3iA9eFUffrVHu5SYE2R</span>
+          <button class="copy-btn" onclick="copyAddr(this)">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-box">
+      <p><strong>Tip:</strong> Always double-check the wallet address before sending. Click the <strong>Copy</strong> button to copy the exact address to your clipboard.</p>
+    </div>
+  </div>
+
+  <script>
+    function copyAddr(btn) {
+      var text = btn.parentElement.querySelector('.address-text').textContent;
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>`;
+}
+
+// ─── Serve /donate page ──────────────────────────────────────────────────────
+app.get("/donate", (_req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.send(getDonatePage());
+});
+
 // ─── Custom robots.txt — point sitemap to mirror domain ──────────────────────
 app.get("/robots.txt", async (_req, res) => {
   try {
@@ -355,8 +676,14 @@ app.use("*", async (req, res) => {
       const bodyStr = decompressed.toString("utf-8");
       const rewritten = rewriteBody(bodyStr, contentType);
 
+      // Inject donate button into navbar for HTML pages
+      let finalBody = rewritten;
+      if (/text\/html/i.test(contentType)) {
+        finalBody = injectDonateButton(finalBody);
+      }
+
       // Set correct content-length for rewritten body
-      const outBuffer = Buffer.from(rewritten, "utf-8");
+      const outBuffer = Buffer.from(finalBody, "utf-8");
       res.setHeader("Content-Length", outBuffer.length);
       res.end(outBuffer);
     } else {
