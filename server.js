@@ -184,79 +184,73 @@ function escapeRegExp(string) {
 // Strategy: inject CSS to create space in navbar + fixed element outside React root
 const DONATE_INJECT_HTML = `
 <style>
-/* Desktop: create space at the far right of the navbar for our donate button */
-@media(min-width:997px){
-  .navbar .navbar__inner{
-    padding-right:90px!important;
-  }
-  #mas-donate-btn{
-    position:fixed;
-    top:0;
-    right:0;
-    height:60px;
-    z-index:10000;
-    display:flex;
-    align-items:center;
-    padding:0 16px 0 8px;
-  }
-  #mas-donate-btn a{
-    color:#e8590c;
-    font-weight:700;
-    font-size:.9rem;
-    text-decoration:none;
-    padding:6px 14px;
-    border-radius:6px;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
-    transition:all .2s;
-    white-space:nowrap;
-  }
-  #mas-donate-btn a:hover{
-    color:#fff;
-    background:#e8590c;
-  }
+/* Reserve space in navbar for donate button on all screen sizes */
+.navbar .navbar__inner{
+  padding-right:90px!important;
 }
-/* Mobile: show donate as a sticky bar at the bottom */
+#mas-donate-btn{
+  position:fixed;
+  top:0;
+  right:0;
+  height:60px;
+  z-index:10000;
+  display:flex;
+  align-items:center;
+  padding:0 16px 0 8px;
+}
+#mas-donate-btn a{
+  color:#e8590c;
+  font-weight:700;
+  font-size:.9rem;
+  text-decoration:none;
+  padding:6px 14px;
+  border-radius:6px;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
+  transition:all .2s;
+  white-space:nowrap;
+}
+#mas-donate-btn a:hover{
+  color:#fff;
+  background:#e8590c;
+}
+/* Also add Donate link inside mobile sidebar menu */
+.mas-donate-sidebar{
+  display:none;
+}
 @media(max-width:996px){
   .navbar .navbar__inner{
-    padding-right:0!important;
+    padding-right:80px!important;
   }
   #mas-donate-btn{
-    position:fixed;
-    bottom:0;
-    left:0;
-    right:0;
-    height:48px;
-    z-index:10000;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(36,37,38,0.97);
-    border-top:1px solid #3a3a3c;
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
+    padding:0 10px 0 4px;
   }
   #mas-donate-btn a{
-    color:#e8590c;
-    font-weight:700;
-    font-size:1rem;
-    text-decoration:none;
-    padding:8px 32px;
-    border-radius:6px;
-    border:1.5px solid #e8590c;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
-    transition:all .2s;
+    font-size:.8rem;
+    padding:5px 10px;
   }
-  #mas-donate-btn a:hover{
-    color:#fff;
-    background:#e8590c;
-  }
-  /* Add bottom padding to main content so it's not hidden behind donate bar */
-  #__docusaurus{
-    padding-bottom:48px;
+  /* Show donate in sidebar menu */
+  .mas-donate-sidebar{
+    display:list-item;
   }
 }
 </style>
-<div id="mas-donate-btn"><a href="/donate">Donate</a></div>`;
+<div id="mas-donate-btn"><a href="/donate">Donate</a></div>
+<script>
+(function(){
+  function addSidebarLink(){
+    var lists=document.querySelectorAll('.navbar-sidebar__item.menu .menu__list');
+    lists.forEach(function(ul){
+      if(ul.querySelector('.mas-donate-sidebar'))return;
+      var li=document.createElement('li');
+      li.className='menu__list-item mas-donate-sidebar';
+      li.innerHTML='<a class="menu__link" href="/donate" style="color:#e8590c;font-weight:700;">Donate</a>';
+      ul.appendChild(li);
+    });
+  }
+  addSidebarLink();
+  new MutationObserver(function(){addSidebarLink();}).observe(document.body,{childList:true,subtree:true});
+})();
+</script>`;
 
 function injectDonateButton(html) {
   // Inject right before </body> — outside React's root
